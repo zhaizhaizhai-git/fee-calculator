@@ -215,8 +215,8 @@ function calculate() {
         return;
     }
 
-    // 需修改字数 = 总字数 * 重复率
-    const modifiedWords = words * rate;
+    // 需修改字数 = 总字数 * (重复率 / 100)
+    const modifiedWords = (words * rate) / 100;
     
     // 计费：(需修改字数 / 1000) * 12
     const finalNormal = (modifiedWords / 1000) * 12;
