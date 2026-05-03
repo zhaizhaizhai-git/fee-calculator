@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>稿费自动计算器</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+    font-family: -apple-system, sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+.container {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 400px;
+}
+h2 { text-align: center; color: #333; }
+
+.input-group { margin-bottom: 15px; }
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.result-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: #e8f5e9;
+    border-radius: 8px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+}
+
+.price {
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+.urgent {
+    color: #d32f2f;
+}
+
+#reader {
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>费用试算</h2>
+
+<div class="input-group">
+<label>输入总字数</label>
+<input type="number" id="words" placeholder="例如: 5000">
+</div>
+
+<div class="input-group">
+<label>目标重复率 (%)</label>
+<input type="number" id="rate" placeholder="例如: 15">
+</div>
+
+<button onclick="calculate()">计算费用</button>
+<button onclick="startScan()">扫码填写</button>
+
+<div id="reader"></div>
+
+<div class="result-box">
+<div class="result-item">
+<span>普通费用：</span>
+<span class="price" id="normalPrice">￥0.00</span>
+</div>
+
+<div class="result-item">
+<span>加急费用 (+￥50)：</span>
+<span class="price urgent" id="urgentPrice">￥0.00</span>
+</div>
+</div>
+
+</div>
+
+<script>
+function calculate() {
+    let words = parseFloat(document.getElementById('words').value);
+    let rate = parseFloat(document.getElementById('rate').value);
+
+    if (isNaN(words) || words <= 0) {
+        alert("请输入正确的字数");
+        return;
+    }
+
+    let extra = 0;
+    if (!isNaN(rate)) {
+        if (rate <= 10) extra = 20;
+        else if (rate <= 20) extra = 10;
+    }
+
+    let basePrice = (words / 1000) * 12 + extra;
+    let urgentPrice = basePrice + 50;
+
+    document.getElementById('normalPrice').innerText = "￥" + basePrice.toFixed(2);
+    document.getElementById('urgentPrice').innerText = "￥" + urgentPrice.toFixed(2);
+}
+
+function startScan() {
+    const html5QrCode = new Html5Qrcode("reader");
+
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+            let parts = qrCodeMessage.split(",");
+
+            if (parts.length >= 2) {
+                document.getElementById('words').value = parts[0];
+                document.getElementById('rate').value = parts[1];
+                calculate();
+            }
+
+            html5QrCode.stop();
+        },
+        error => {}
+    );
+}
+</script>
+
+</body>
+</html>
