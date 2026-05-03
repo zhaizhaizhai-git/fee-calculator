@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>研究生个人学术服务 - 结算中心</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root {
             --primary: #0f172a; /* 睿智深蓝 */
@@ -82,7 +81,8 @@
         }
         input:focus { outline: none; border-color: var(--accent); background: white; }
 
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 25px; }
+        /* 按钮布局优化：去掉扫码后，两个按钮并排 */
+        .btn-group { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px; margin-top: 25px; }
         button {
             padding: 14px;
             border: none;
@@ -91,9 +91,8 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-calc { background: var(--primary); color: white; grid-column: span 2; font-size: 16px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
-        .btn-scan { background: #f1f5f9; color: #475569; }
-        .btn-copy { background: #f1f5f9; color: #475569; }
+        .btn-calc { background: var(--primary); color: white; font-size: 16px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2); }
+        .btn-copy { background: #f1f5f9; color: #475569; font-size: 14px; }
         button:active { transform: translateY(2px); }
 
         .result-box {
@@ -107,8 +106,6 @@
         .price-label { font-size: 14px; font-weight: 500; }
         .price-value { font-size: 26px; font-weight: 900; color: var(--success); }
         .urgent .price-value { color: #dc2626; }
-
-        #reader { margin-top: 15px; border-radius: 15px; overflow: hidden; }
 
         /* 成功案例区 */
         .section-title { width: 100%; max-width: 420px; font-weight: 800; margin-bottom: 12px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
@@ -169,12 +166,9 @@
     </div>
 
     <div class="btn-group">
-        <button class="btn-calc" onclick="calculate()">获取个人服务报价</button>
-        <button class="btn-scan" id="scanBtn" onclick="toggleScan()">扫码导入</button>
-        <button class="btn-copy" onclick="copyResult()">复制结算详情</button>
+        <button class="btn-calc" onclick="calculate()">立即试算报价</button>
+        <button class="btn-copy" onclick="copyResult()">复制详情</button>
     </div>
-
-    <div id="reader"></div>
 
     <div class="result-box">
         <div class="result-item">
@@ -202,69 +196,68 @@
 </div>
 
 <script>
-let html5QrCode;
-
 function calculate() {
-    const words = parseFloat(document.getElementById('words').value) || 0;
-    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const wordsInput = document.getElementById('words').value;
+    const rateInput = document.getElementById('rate').value;
     
+    const words = parseFloat(wordsInput) || 0;
+    const rate = parseFloat(rateInput) || 0;
+    
+    const normalPriceEl = document.getElementById('normalPrice');
+    const urgentPriceEl = document.getElementById('urgentPrice');
+
     if (words <= 0) {
-        document.getElementById('normalPrice').innerText = "￥0.00";
-        document.getElementById('urgentPrice').innerText = "￥0.00";
+        normalPriceEl.innerText = "￥0.00";
+        urgentPriceEl.innerText = "￥0.00";
         return;
     }
 
     // 核心定价：12元 / 1000字
     const basePrice = (words / 1000) * 12;
 
-    // 难度及手工溢价 (重复率越高，手工重写的工作量呈指数增长)
+    // 难度及手工溢价逻辑
     let extra = 0;
-    if (rate > 80) extra = 35;      // 几乎全篇重写
-    else if (rate > 50) extra = 20; // 较多改动
-    else if (rate > 20) extra = 10; // 少量优化
+    if (rate > 80) extra = 35;      
+    else if (rate > 50) extra = 20; 
+    else if (rate > 20) extra = 10; 
 
     const finalNormal = basePrice + extra;
     const finalUrgent = finalNormal + 50; 
 
-    document.getElementById('normalPrice').innerText = "￥" + finalNormal.toFixed(2);
-    document.getElementById('urgentPrice').innerText = "￥" + finalUrgent.toFixed(2);
-}
-
-async function toggleScan() {
-    const btn = document.getElementById('scanBtn');
-    if (html5QrCode && html5QrCode.isScanning) {
-        await html5QrCode.stop();
-        btn.innerText = "扫码导入";
-        return;
-    }
-    html5QrCode = new Html5Qrcode("reader");
-    btn.innerText = "停止扫码";
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        qrCodeMessage => {
-            const parts = qrCodeMessage.split(/[，,]/);
-            if (parts.length >= 2) {
-                document.getElementById('words').value = parts[0];
-                document.getElementById('rate').value = parts[1];
-                calculate();
-                toggleScan();
-            }
-        },
-        error => {}
-    );
+    normalPriceEl.innerText = "￥" + finalNormal.toFixed(2);
+    urgentPriceEl.innerText = "￥" + finalUrgent.toFixed(2);
 }
 
 function copyResult() {
     const normal = document.getElementById('normalPrice').innerText;
     const words = document.getElementById('words').value;
-    const text = `【研究生个人接单·结算单】\n————————————————\n服务说明：纯手工润色 + 格式调优\n待处理字数：${words}\n预估总费用：${normal}\n————————————————\n⭐ 个人承诺：包调格式、包售后直至满意、绝不使用AI。`;
+    const rate = document.getElementById('rate').value || 0;
     
-    navigator.clipboard.writeText(text).then(() => {
-        alert("结算单已复制！快发给你的同学/客户吧~");
-    }).catch(err => {
-        alert("复制失败，请尝试截图保存");
-    });
+    if (!words || words <= 0) {
+        alert("请先输入有效字数再复制");
+        return;
+    }
+
+    const text = `【研究生个人接单·结算单】\n————————————————\n服务项目：纯手工润色 + 格式调优\n待处理字数：${words}\n当前重复率：${rate}%\n预估总费用：${normal}\n————————————————\n⭐ 个人承诺：包调格式、包售后直至满意、绝不使用AI。`;
+    
+    // 现代复制逻辑
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert("结算单已复制！快发给你的同学/客户吧~");
+        });
+    } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            alert("结算单已复制！");
+        } catch (err) {
+            alert("复制失败，请手动长按结果截图");
+        }
+        document.body.removeChild(textArea);
+    }
 }
 </script>
 
